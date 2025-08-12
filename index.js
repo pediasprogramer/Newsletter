@@ -16,23 +16,18 @@ const port = process.env.PORT || 3000;
 
 // Determinar o caminho do db.json com base no ambiente
 const isRender = process.env.NODE_ENV === 'production';
-const dbPath = isRender ? '/db.json' : path.join(__dirname, 'data', 'db.json');
+const dbPath = path.join(__dirname, 'db.json'); // Usar db.json no mesmo nível
 
-// Verificar se o diretório pai existe (apenas no ambiente local, pois Render gerencia /app/data)
-const dbDir = path.dirname(dbPath);
-if (!isRender && !fs.existsSync(dbDir)) {
-  try {
-    fs.mkdirSync(dbDir, { recursive: true });
-    console.log(`Diretório criado localmente: ${dbDir}`);
-  } catch (err) {
-    console.error(`Erro ao criar diretório ${dbDir}:`, err);
-  }
+// Verificar e inicializar o db.json
+try {
+  const adapter = new FileSync(dbPath);
+  const db = lowdb(adapter);
+  db.defaults({ subscribers: [], articles: [] }).write();
+  console.log(`Arquivo db.json inicializado em: ${dbPath}`);
+} catch (err) {
+  console.error(`Erro ao inicializar o LowDB com ${dbPath}:`, err);
+  throw err; // Parar a execução se o banco de dados não puder ser inicializado
 }
-
-const adapter = new FileSync(dbPath);
-const db = lowdb(adapter);
-
-db.defaults({ subscribers: [], articles: [] }).write();
 
 let newsCache = {};
 
@@ -182,6 +177,9 @@ app.get('/subscribe', (req, res) => {
 
 app.post('/send-whatsapp', (req, res) => {
   const { selectedArticles, whatsappNumber } = req.body;
+  if (!process.env.TWILIO_WHATSAPP_FROM) {
+    return res.status(500).send('Erro: TWILIO_WHATSAPP_FROM não configurado.');
+  }
   const links = Array.isArray(selectedArticles) ? selectedArticles.join('\n') : selectedArticles;
   twilio.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM,
