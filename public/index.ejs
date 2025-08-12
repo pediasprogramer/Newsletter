@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Newsletter Profissional - Gerenciar Inscrições</title>
+  <style>
+    body { font-family: 'Helvetica', Arial, sans-serif; max-width: 900px; margin: 40px auto; background-color: #f9f9f9; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    h1 { color: #2c3e50; font-size: 2.5em; margin-bottom: 20px; }
+    h2 { color: #34495e; margin: 20px 0; }
+    p { color: #7f8c8d; font-size: 1.1em; margin-bottom: 15px; }
+    form { margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap; }
+    input[type="text"], input[type="email"], button { padding: 10px; border: 2px solid #ecf0f1; border-radius: 6px; font-size: 1em; }
+    button { background-color: #3498db; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #2980b9; }
+    .delete-btn { background-color: #e74c3c; }
+    .delete-btn:hover { background-color: #c0392b; }
+    a { color: #3498db; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 15px 0; padding: 15px; border: 2px solid #ecf0f1; border-radius: 8px; background: #fff; display: flex; justify-content: space-between; align-items: center; }
+  </style>
+</head>
+<body>
+  <h1>Newsletter - Gerenciar Inscrições</h1>
+  <p>Inscreva-se em tópicos para receber notícias e gerencie suas inscrições.</p>
+  <form action="/subscribe" method="POST">
+    <input type="text" name="topic" placeholder="Tópico (ex: política brasileira)" required style="flex: 2;">
+    <input type="email" name="email" placeholder="Seu e-mail" required style="flex: 2;">
+    <button type="submit" style="flex: 1;">Salvar Inscrição</button>
+  </form>
+  <form action="/reset-db" method="GET">
+    <button type="submit" style="background-color: #e74c3c;">Resetar Todas as Inscrições</button>
+  </form>
+
+  <h2>Inscrições Atuais</h2>
+  <% let subscribersList = (subscribers && Array.isArray(subscribers)) ? subscribers : []; %>
+  <% if (subscribersList.length > 0) { %>
+    <ul>
+      <% subscribersList.forEach(sub => { %>
+        <li>
+          <span>Tópico: <%= sub.topic %> - E-mail: <%= sub.email %></span>
+          <form action="/unsubscribe" method="POST" style="margin: 0;">
+            <input type="hidden" name="topic" value="<%= sub.topic %>">
+            <input type="hidden" name="email" value="<%= sub.email %>">
+            <button type="submit" class="delete-btn">Excluir</button>
+          </form>
+        </li>
+      <% }); %>
+    </ul>
+  <% } else { %>
+    <p>Nenhuma inscrição encontrada.</p>
+  <% } %>
+  <p><a href="/subscribe">Ver Notícias Selecionadas</a></p>
+</body>
+</html>

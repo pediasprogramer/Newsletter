@@ -1,0 +1,12 @@
+.env
+
+# Ignorar dependências
+node_modules/
+
+# Ignorar arquivos de banco de dados local
+db.json
+
+# Ignorar arquivos temporários do sistema/IDE
+*.log
+.DS_Store
+Thumbs.db

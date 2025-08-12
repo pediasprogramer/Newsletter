@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Newsletter Profissional - Notícias Selecionadas</title>
+  <style>
+    body { font-family: 'Helvetica', Arial, sans-serif; max-width: 900px; margin: 40px auto; background-color: #f9f9f9; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    h1 { color: #2c3e50; font-size: 2.5em; margin-bottom: 20px; }
+    h2 { color: #34495e; margin: 20px 0; }
+    p { color: #7f8c8d; font-size: 1.1em; margin-bottom: 15px; }
+    form { margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap; }
+    select, input[type="date"], input[type="text"], button { padding: 10px; border: 2px solid #ecf0f1; border-radius: 6px; font-size: 1em; }
+    button { background-color: #3498db; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #2980b9; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 15px 0; padding: 15px; border: 2px solid #ecf0f1; border-radius: 8px; background: #fff; }
+    a { color: #3498db; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .whatsapp-form { margin-top: 20px; display: flex; gap: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Newsletter - Notícias Selecionadas</h1>
+  <p>Aqui estão as notícias dos tópicos que você escolheu. Selecione e envie via WhatsApp.</p>
+
+  <h2>Filtros</h2>
+  <form action="/subscribe" method="GET" style="align-items: flex-end;">
+    <select name="topic" style="flex: 2;">
+      <option value="">Todos os Tópicos</option>
+      <% topics.forEach(t => { %>
+        <option value="<%= t %>" <%= (query.topic === t) ? 'selected' : '' %>><%= t %></option>
+      <% }); %>
+    </select>
+    <input type="date" name="startDate" value="<%= query.startDate || '' %>" placeholder="Data Inicial" style="flex: 2;">
+    <input type="date" name="endDate" value="<%= query.endDate || '' %>" placeholder="Data Final" style="flex: 2;">
+    <button type="submit" style="flex: 1;">Filtrar</button>
+  </form>
+
+  <form action="/send-whatsapp" method="POST" class="whatsapp-form">
+    <h2>Notícias</h2>
+    <% if (articles && articles.length > 0) { %>
+      <ul>
+        <% articles.forEach(a => { %>
+          <li>
+            <input type="checkbox" name="selectedArticles" value="<%= a.link %>">
+            <strong><%= a.title %></strong><br>
+            <%= a.description || 'Sem descrição' %><br>
+            <em>Fonte:</em> <%= a.source %><br>
+            <em>Data:</em> <%= new Date(a.pubDate).toLocaleString('pt-BR') %><br>
+            <a href="<%= a.link %>" target="_blank">Leia mais</a>
+          </li>
+        <% }); %>
+      </ul>
+      <input type="text" name="whatsappNumber" placeholder="Número WhatsApp (ex: 5511999999999)" required style="flex: 2;">
+      <button type="submit" style="flex: 1;">Enviar Selecionadas via WhatsApp</button>
+    <% } else { %>
+      <p>Nenhuma notícia disponível.</p>
+    <% } %>
+  </form>
+  <p>Atualizado por: Sistema Newsletter Pro - <%= new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %></p>
+  <p><a href="/">Voltar para Gerenciar Inscrições</a></p>
+</body>
+</html>
