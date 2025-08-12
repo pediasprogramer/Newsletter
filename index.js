@@ -14,19 +14,19 @@ const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWI
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Determinar o caminho do db.json com base no ambiente
-const isRender = process.env.NODE_ENV === 'production';
-const dbPath = path.join(__dirname, 'db.json'); // Usar db.json no mesmo nível
+// Determinar o caminho do db.json
+const dbPath = path.join(__dirname, 'db.json'); // Mesmo nível do index.js
 
-// Verificar e inicializar o db.json
+// Inicializar o LowDB no escopo global
+let db;
 try {
   const adapter = new FileSync(dbPath);
-  const db = lowdb(adapter);
+  db = lowdb(adapter);
   db.defaults({ subscribers: [], articles: [] }).write();
   console.log(`Arquivo db.json inicializado em: ${dbPath}`);
 } catch (err) {
   console.error(`Erro ao inicializar o LowDB com ${dbPath}:`, err);
-  throw err; // Parar a execução se o banco de dados não puder ser inicializado
+  process.exit(1); // Encerrar a aplicação se o db falhar
 }
 
 let newsCache = {};
