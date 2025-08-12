@@ -16,7 +16,7 @@ const port = process.env.PORT || 3000;
 
 // Determinar o caminho do db.json com base no ambiente
 const isRender = process.env.NODE_ENV === 'production';
-const dbPath = isRender ? '/app/data/db.json' : path.join(__dirname, 'data', 'db.json');
+const dbPath = isRender ? '/db.json' : path.join(__dirname, 'data', 'db.json');
 
 // Verificar se o diretório pai existe (apenas no ambiente local, pois Render gerencia /app/data)
 const dbDir = path.dirname(dbPath);
