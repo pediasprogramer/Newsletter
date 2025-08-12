@@ -18,11 +18,15 @@ const port = process.env.PORT || 3000;
 const isRender = process.env.NODE_ENV === 'production';
 const dbPath = isRender ? '/app/data/db.json' : path.join(__dirname, 'data', 'db.json');
 
-// Criar diretório pai, se necessário
+// Verificar se o diretório pai existe (apenas no ambiente local, pois Render gerencia /app/data)
 const dbDir = path.dirname(dbPath);
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
-  console.log(`Diretório criado: ${dbDir}`);
+if (!isRender && !fs.existsSync(dbDir)) {
+  try {
+    fs.mkdirSync(dbDir, { recursive: true });
+    console.log(`Diretório criado localmente: ${dbDir}`);
+  } catch (err) {
+    console.error(`Erro ao criar diretório ${dbDir}:`, err);
+  }
 }
 
 const adapter = new FileSync(dbPath);
