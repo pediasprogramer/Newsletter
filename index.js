@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -10,8 +12,20 @@ const ejs = require('ejs');
 const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 const app = express();
-const port = 3000;
-const adapter = new FileSync('db.json');
+const port = process.env.PORT || 3000;
+
+// Determinar o caminho do db.json com base no ambiente
+const isRender = process.env.NODE_ENV === 'production';
+const dbPath = isRender ? '/app/data/db.json' : path.join(__dirname, 'data', 'db.json');
+
+// Criar diretório pai, se necessário
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+  console.log(`Diretório criado: ${dbDir}`);
+}
+
+const adapter = new FileSync(dbPath);
 const db = lowdb(adapter);
 
 db.defaults({ subscribers: [], articles: [] }).write();
@@ -31,33 +45,49 @@ app.set('views', 'public');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
-// Initial news fetch on startup
+// Inicialização: Verificar variáveis de ambiente
+console.log('Iniciando servidor...');
+console.log('Variáveis de ambiente carregadas:', {
+  EMAIL_USER: !!process.env.EMAIL_USER,
+  EMAIL_PASS: !!process.env.EMAIL_PASS,
+  TWILIO_ACCOUNT_SID: !!process.env.TWILIO_ACCOUNT_SID,
+  TWILIO_AUTH_TOKEN: !!process.env.TWILIO_AUTH_TOKEN,
+  TWILIO_WHATSAPP_FROM: !!process.env.TWILIO_WHATSAPP_FROM,
+  PORT: port,
+  DB_PATH: dbPath
+});
+
+// Busca inicial de notícias no startup com tratamento de erros
 (async () => {
-  const subscribers = db.get('subscribers').value() || [];
-  const parser = new Parser();
-  for (let sub of subscribers) {
-    const feedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(sub.topic)}&hl=pt-BR&gl=BR&ceid=BR:pt`;
-    const feed = await parser.parseURL(feedUrl);
-    const articles = (feed.items || []).map(item => ({
-      title: item.title || 'Sem título',
-      description: item.contentSnippet || 'Sem descrição',
-      link: item.link,
-      pubDate: item.pubDate,
-      source: item.source || 'Google News',
-      topic: sub.topic
-    })).slice(0, 50);
-    if (articles.length > 0) {
-      newsCache[sub.topic] = articles;
-      db.get('articles').push(...articles).write();
+  try {
+    const subscribers = db.get('subscribers').value() || [];
+    const parser = new Parser();
+    for (let sub of subscribers) {
+      const feedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(sub.topic)}&hl=pt-BR&gl=BR&ceid=BR:pt`;
+      const feed = await parser.parseURL(feedUrl);
+      const articles = (feed.items || []).map(item => ({
+        title: item.title || 'Sem título',
+        description: item.contentSnippet || 'Sem descrição',
+        link: item.link,
+        pubDate: item.pubDate,
+        source: item.source || 'Google News',
+        topic: sub.topic
+      })).slice(0, 10);
+      if (articles.length > 0) {
+        newsCache[sub.topic] = articles;
+        db.get('articles').push(...articles).write();
+      }
     }
+    console.log('Busca inicial de notícias concluída. Cache:', newsCache);
+  } catch (err) {
+    console.error('Erro na busca inicial de notícias:', err);
   }
-  console.log('Initial news fetch completed. Cache:', newsCache);
 })();
 
 app.get('/', (req, res) => {
   const subscribers = db.get('subscribers').value() || [];
-  const topics = subscribers.map(s => s.topic) || []; // Pass topics to index.ejs
-  console.log('Subscribers and topics passed to index.ejs:', { subscribers, topics });
+  const topics = subscribers.map(s => s.topic) || [];
+  console.log('Assinantes e tópicos passados para index.ejs:', { subscribers, topics });
   res.render('index', { subscribers, topics });
 });
 
@@ -66,25 +96,33 @@ app.post('/subscribe', (req, res) => {
   if (!topic || !email) {
     return res.status(400).send('Tópico e e-mail são obrigatórios!');
   }
-  const subscriber = { topic: topic.trim().toLowerCase(), email: email.trim(), lastCheck: Date.now(), lastArticles: [] };
+  const subscriber = { 
+    topic: topic.trim().toLowerCase(), 
+    email: email.trim(), 
+    lastCheck: Date.now(), 
+    lastArticles: [] 
+  };
   if (!db.get('subscribers').find({ topic: subscriber.topic, email: subscriber.email }).value()) {
     db.get('subscribers').push(subscriber).write();
-    // Fetch news for new topic immediately
     (async () => {
-      const parser = new Parser();
-      const feedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(subscriber.topic)}&hl=pt-BR&gl=BR&ceid=BR:pt`;
-      const feed = await parser.parseURL(feedUrl);
-      const articles = (feed.items || []).map(item => ({
-        title: item.title || 'Sem título',
-        description: item.contentSnippet || 'Sem descrição',
-        link: item.link,
-        pubDate: item.pubDate,
-        source: item.source || 'Google News',
-        topic: subscriber.topic
-      })).slice(0, 50);
-      if (articles.length > 0) {
-        newsCache[subscriber.topic] = articles;
-        db.get('articles').push(...articles).write();
+      try {
+        const parser = new Parser();
+        const feedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(subscriber.topic)}&hl=pt-BR&gl=BR&ceid=BR:pt`;
+        const feed = await parser.parseURL(feedUrl);
+        const articles = (feed.items || []).map(item => ({
+          title: item.title || 'Sem título',
+          description: item.contentSnippet || 'Sem descrição',
+          link: item.link,
+          pubDate: item.pubDate,
+          source: item.source || 'Google News',
+          topic: subscriber.topic
+        })).slice(0, 10);
+        if (articles.length > 0) {
+          newsCache[subscriber.topic] = articles;
+          db.get('articles').push(...articles).write();
+        }
+      } catch (err) {
+        console.error('Erro na busca de notícias para novo assinante:', err);
       }
     })();
   }
@@ -161,7 +199,7 @@ async function fetchNews(topic) {
       pubDate: item.pubDate,
       source: item.source || 'Google News',
       topic: topic
-    })).slice(0, 50);
+    })).slice(0, 10);
   } catch (err) {
     console.error(`Erro ao buscar notícias para ${topic}:`, err);
     return [];
@@ -183,15 +221,6 @@ function formatEmailContent(topic, articles) {
   `;
 }
 
-app.post('/send-whatsapp', (req, res) => {
-  const { selectedArticles, whatsappNumber } = req.body;
-  const links = Array.isArray(selectedArticles) ? selectedArticles.join('\n') : selectedArticles;
-  const encodedMessage = encodeURIComponent(links);
-  const whatsappLink = `https://wa.me/${whatsappNumber.replace(/[^\d]/g, '')}?text=${encodedMessage}`;
-
-  res.render('whatsapp-link', { whatsappLink, whatsappNumber });
-});
-
 async function sendEmail(to, subject, html) {
   const mailOptions = { from: process.env.EMAIL_USER, to, subject, html };
   try {
@@ -203,24 +232,28 @@ async function sendEmail(to, subject, html) {
   }
 }
 
-cron.schedule('*/10 * * * *', async () => {
-  const subscribers = db.get('subscribers').value();
-  for (let sub of subscribers) {
-    const articles = await fetchNews(sub.topic);
-    if (articles.length > 0) {
-      newsCache[sub.topic] = articles;
-      db.get('articles').push(...articles).write();
-      const newArticles = articles.filter(a => !sub.lastArticles.some(la => la.link === a.link));
-      if (newArticles.length > 0) {
-        const htmlContent = formatEmailContent(sub.topic, newArticles);
-        await sendEmail(sub.email, `Atualização - ${sub.topic}`, `<html><body>${htmlContent}</body></html>`);
-        sub.lastArticles = [...sub.lastArticles, ...newArticles.map(a => ({ link: a.link, pubDate: a.pubDate }))].slice(-10);
-        db.write();
+cron.schedule('0 * * * *', async () => {
+  try {
+    const subscribers = db.get('subscribers').value();
+    for (let sub of subscribers) {
+      const articles = await fetchNews(sub.topic);
+      if (articles.length > 0) {
+        newsCache[sub.topic] = articles;
+        db.get('articles').push(...articles).write();
+        const newArticles = articles.filter(a => !sub.lastArticles.some(la => la.link === a.link));
+        if (newArticles.length > 0) {
+          const htmlContent = formatEmailContent(sub.topic, newArticles);
+          await sendEmail(sub.email, `Atualização - ${sub.topic}`, `<html><body>${htmlContent}</body></html>`);
+          sub.lastArticles = [...sub.lastArticles, ...newArticles.map(a => ({ link: a.link, pubDate: a.pubDate }))].slice(-10);
+          db.write();
+        }
       }
     }
+  } catch (err) {
+    console.error('Erro no cron job:', err);
   }
 });
 
-app.listen(port, () => {
-  console.log(`Servidor rodando em http://localhost:${port}`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Servidor rodando em http://0.0.0.0:${port}`);
 });
