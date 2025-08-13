@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    h1 {
+      color: #333;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding-bottom: 20px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #eeeeee;
+    }
+    li strong {
+      font-size: 1.1em;
+      color: #0056b3;
+    }
+    a {
+      color: #0056b3;
+      text-decoration: none;
+    }
+    p {
+      line-height: 1.6;
+    }
+    .footer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 0.8em;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Resumo de Notícias</h1>
+    <p>Enviado em: <%= new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %></p>
+    <ul>
+      <% articles.forEach(function(article) { %>
+        <li>
+          <strong><a href="<%= article.link %>"><%= article.title %></a></strong>
+          <p style="font-size: 0.9em; color: #666;">
+            <strong>Fonte:</strong> <%= article.source %> | 
+            <strong>Data:</strong> <%= new Date(article.pubDate).toLocaleDateString('pt-BR') %>
+          </p>
+          <p><%= article.description %></p>
+          <a href="<%= article.link %>" target="_blank">Leia a matéria completa &rarr;</a>
+        </li>
+      <% }); %>
+    </ul>
+    <div class="footer">
+      <p>Enviado por Sistema Newsletter Pro</p>
+    </div>
+  </div>
+</body>
+</html>
