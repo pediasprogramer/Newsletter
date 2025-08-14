@@ -1,56 +1,342 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Newsletter Profissional - Gerenciar Inscrições</title>
-  <style>
-    body { font-family: 'Helvetica', Arial, sans-serif; max-width: 900px; margin: 40px auto; background-color: #f9f9f9; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-    h1 { color: #2c3e50; font-size: 2.5em; margin-bottom: 20px; }
-    h2 { color: #34495e; margin: 20px 0; }
-    p { color: #7f8c8d; font-size: 1.1em; margin-bottom: 15px; }
-    form { margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap; }
-    input[type="text"], input[type="email"], button { padding: 10px; border: 2px solid #ecf0f1; border-radius: 6px; font-size: 1em; }
-    button { background-color: #3498db; color: white; border: none; cursor: pointer; }
-    button:hover { background-color: #2980b9; }
-    .delete-btn { background-color: #e74c3c; }
-    .delete-btn:hover { background-color: #c0392b; }
-    a { color: #3498db; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    ul { list-style: none; padding: 0; }
-    li { margin: 15px 0; padding: 15px; border: 2px solid #ecf0f1; border-radius: 8px; background: #fff; display: flex; justify-content: space-between; align-items: center; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Monitoramento de Notícias</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        /* --- VARIÁVEIS DE COR PARA OS TEMAS --- */
+        :root {
+            --bg-color: #f4f7f9;
+            --card-bg-color: #ffffff;
+            --text-color: #2c3e50;
+            --heading-color: #212529;
+            --border-color: #e3e9ef;
+            --accent-color: #007bff;
+            --shadow-color: rgba(0,0,0,0.08);
+            --timeline-line-color: #dbe2e8;
+        }
+
+        body.dark-mode {
+            --bg-color: #1a1a2e;
+            --card-bg-color: #16213e;
+            --text-color: #e0e0e0;
+            --heading-color: #ffffff;
+            --border-color: #2a3b5a;
+            --accent-color: #009ef7;
+            --shadow-color: rgba(0,0,0,0.2);
+            --timeline-line-color: #2a3b5a;
+        }
+
+        /* --- ESTILOS GERAIS --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 0;
+        }
+        
+        /* --- HEADER E FORMULÁRIO --- */
+        .header {
+            background-color: var(--card-bg-color);
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px var(--shadow-color);
+            margin-bottom: 50px;
+            transition: background-color 0.3s;
+            position: relative;
+        }
+        
+        .header h1 {
+            color: var(--heading-color);
+            font-size: 2em;
+            margin: 0 0 20px 0;
+        }
+
+        form { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
+        input[type="text"], input[type="date"] {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border-radius: 8px;
+            font-size: 1em;
+            flex-grow: 1;
+        }
+        .search-button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .search-button:hover { background-color: #0056b3; }
+
+        /* --- BOTÃO DARK MODE --- */
+        .theme-toggle-btn {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        /* --- ESTRUTURA DA TIMELINE --- */
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background-color: var(--timeline-line-color);
+            transform: translateX(-50%);
+        }
+
+        .timeline-item {
+            padding: 10px 40px;
+            position: relative;
+            width: 50%;
+            opacity: 0; /* Inicia invisível para animação */
+            transform: translateY(50px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        
+        .timeline-item.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .timeline-item:nth-child(odd) { left: 0; }
+        .timeline-item:nth-child(even) { left: 50%; }
+
+        .timeline-item::after { /* Círculo na linha do tempo */
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            right: -8px;
+            top: 32px;
+            background-color: var(--card-bg-color);
+            border: 3px solid var(--accent-color);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        .timeline-item:nth-child(even)::after { left: -8px; }
+
+        /* --- CARD DE NOTÍCIA NA TIMELINE --- */
+        .news-card {
+            padding: 20px;
+            background-color: var(--card-bg-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px var(--shadow-color);
+            position: relative;
+        }
+        
+        .news-card strong {
+            font-size: 1.1em;
+            color: var(--heading-color);
+            display: block;
+            margin-bottom: 10px;
+        }
+        .news-card .article-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .news-card .article-meta {
+            font-size: 0.85em;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .news-card p {
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        .news-card a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        /* Adiciona a seta para fora do card */
+        .news-card::before {
+            content: '';
+            position: absolute;
+            top: 28px;
+            width: 0;
+            height: 0;
+            border: 10px solid transparent;
+        }
+        .timeline-item:nth-child(odd) .news-card::before {
+            right: -20px;
+            border-left-color: var(--card-bg-color);
+        }
+        .timeline-item:nth-child(even) .news-card::before {
+            left: -20px;
+            border-right-color: var(--card-bg-color);
+        }
+
+        /* --- BOTÃO WHATSAPP FLUTUANTE --- */
+        .floating-whatsapp-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #25D366;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s ease-in-out;
+        }
+        .floating-whatsapp-btn:hover { transform: scale(1.1); }
+    </style>
 </head>
 <body>
-  <h1>Newsletter - Gerenciar Inscrições</h1>
-  <p>Inscreva-se em tópicos para receber notícias e gerencie suas inscrições.</p>
-  <form action="/subscribe" method="POST">
-    <input type="text" name="topic" placeholder="Tópico (ex: política brasileira)" required style="flex: 2;">
-    <input type="email" name="email" placeholder="Seu e-mail" required style="flex: 2;">
-    <button type="submit" style="flex: 1;">Salvar Inscrição</button>
-  </form>
-  <form action="/reset-db" method="GET">
-    <button type="submit" style="background-color: #e74c3c;">Resetar Todas as Inscrições</button>
-  </form>
 
-  <h2>Inscrições Atuais</h2>
-  <% let subscribersList = (subscribers && Array.isArray(subscribers)) ? subscribers : []; %>
-  <% if (subscribersList.length > 0) { %>
-    <ul>
-      <% subscribersList.forEach(sub => { %>
-        <li>
-          <span>Tópico: <%= sub.topic %> - E-mail: <%= sub.email %></span>
-          <form action="/unsubscribe" method="POST" style="margin: 0;">
-            <input type="hidden" name="topic" value="<%= sub.topic %>">
-            <input type="hidden" name="email" value="<%= sub.email %>">
-            <button type="submit" class="delete-btn">Excluir</button>
-          </form>
-        </li>
-      <% }); %>
-    </ul>
-  <% } else { %>
-    <p>Nenhuma inscrição encontrada.</p>
-  <% } %>
-  <p><a href="/subscribe">Ver Notícias Selecionadas</a></p>
+    <div class="container">
+        <header class="header">
+            <h1>Painel de Monitoramento</h1>
+            <form action="/" method="GET">
+                <input type="text" name="topic" placeholder="Digite o tópico para buscar..." value="<%= query.topic || '' %>" required style="flex: 3;">
+                <input type="date" name="startDate" placeholder="Data Inicial" value="<%= query.startDate || '' %>" style="flex: 1;">
+                <input type="date" name="endDate" placeholder="Data Final" value="<%= query.endDate || '' %>" style="flex: 1;">
+                <button type="submit" class="search-button"><i class="fas fa-search"></i> Consultar</button>
+            </form>
+            <button class="theme-toggle-btn" id="theme-toggle" aria-label="Alterar Tema">
+                <i class="fas fa-moon"></i>
+            </button>
+        </header>
+
+        <div id="newsForm">
+            <% if (typeof articles !== 'undefined' && articles.length > 0) { %>
+                <div class="timeline">
+                    <% articles.forEach(a => { %>
+                        <div class="timeline-item">
+                            <div class="news-card" data-title="<%= a.title %>" data-link="<%= a.link %>" data-topic="<%= a.topic %>" data-source="<%= a.source %>">
+                                <input type="checkbox" name="selectedArticles" value="<%= a.link %>" style="position: absolute; top: 15px; right: 15px;">
+                                <% if (a.image) { %>
+                                   <img src="<%= a.image %>" alt="Imagem da matéria" class="article-image" onerror="this.style.display='none'">
+                                <% } %>
+                                <strong><%= a.title %></strong>
+                                <div class="article-meta">
+                                    <em>Fonte:</em> <%= a.source %> | <em>Data:</em> <%= new Date(a.pubDate).toLocaleDateString('pt-BR') %>
+                                </div>
+                                <p><%= a.description.substring(0, 150) %>...</p> <a href="<%= a.link %>" target="_blank">Leia mais</a>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } else if (query.topic) { %>
+                <p style="text-align: center;">Nenhuma notícia encontrada para este tópico ou filtro.</p>
+            <% } else { %>
+                <p style="text-align: center;">Digite um termo na busca acima para começar.</p>
+            <% } %>
+        </div>
+    </div>
+
+    <% if (typeof articles !== 'undefined' && articles.length > 0) { %>
+        <button type="button" onclick="copyToWhatsapp()" class="floating-whatsapp-btn" aria-label="Copiar Seleção para WhatsApp">
+            <i class="fab fa-whatsapp" style="font-size: 28px; color: white;"></i>
+        </button>
+    <% } %>
+
+    <script>
+        // --- SCRIPT PARA ANIMAÇÃO DE SCROLL E DARK MODE ---
+
+        // 1. Lógica do Dark Mode
+        const themeToggle = document.getElementById('theme-toggle');
+        const body = document.body;
+        const themeIcon = themeToggle.querySelector('i');
+
+        // Verifica se o usuário já tem uma preferência salva
+        if (localStorage.getItem('theme') === 'dark') {
+            body.classList.add('dark-mode');
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+        }
+
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            if (body.classList.contains('dark-mode')) {
+                localStorage.setItem('theme', 'dark');
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+            } else {
+                localStorage.setItem('theme', 'light');
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+            }
+        });
+
+        // 2. Lógica da Animação da Timeline ao Rolar
+        const timelineItems = document.querySelectorAll('.timeline-item');
+
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target); // Para a animação não repetir
+                }
+            });
+        }, { threshold: 0.1 }); // A animação começa quando 10% do item está visível
+
+        timelineItems.forEach(item => {
+            observer.observe(item);
+        });
+
+        // 3. Sua função original do WhatsApp
+        function copyToWhatsapp() {
+          const form = document.getElementById('newsForm');
+          const checkedBoxes = form.querySelectorAll('input[name="selectedArticles"]:checked');
+          if (checkedBoxes.length === 0) {
+            alert('Por favor, selecione ao menos uma notícia para copiar.');
+            return;
+          }
+          let whatsappText = '📰 *Resumo de Notícias Selecionadas*\n\n-----------------------------------\n\n';
+          checkedBoxes.forEach(checkbox => {
+            const listItem = checkbox.closest('.news-card'); // Alterado de 'li' para '.news-card'
+            const title = listItem.dataset.title;
+            const topic = listItem.dataset.topic;
+            const source = listItem.dataset.source;
+            const link = listItem.dataset.link;
+            whatsappText += `*${title.trim()}*\n\n*Assuntos:* ${topic}\n*Fonte:* ${source}\n\n*Leia mais:* ${link}\n\n-----------------------------------\n\n`;
+          });
+          navigator.clipboard.writeText(whatsappText.trim())
+            .then(() => alert(`Notícias copiadas! O texto formatado está pronto para colar no WhatsApp.`))
+            .catch(err => alert('Ocorreu um erro ao tentar copiar as notícias.'));
+        }
+    </script>
 </body>
 </html>
