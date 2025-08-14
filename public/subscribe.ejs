@@ -13,10 +13,21 @@
     select, input[type="date"], button { padding: 10px; border: 2px solid #ecf0f1; border-radius: 6px; font-size: 1em; }
     button { background-color: #3498db; color: white; border: none; cursor: pointer; }
     button:hover { background-color: #2980b9; }
+    .whatsapp-btn { background-color: #25D366; }
+    .whatsapp-btn:hover { background-color: #128C7E; }
     ul { list-style: none; padding: 0; }
     li { margin: 15px 0; padding: 15px; border: 2px solid #ecf0f1; border-radius: 8px; background: #fff; }
     a { color: #3498db; text-decoration: none; }
     a:hover { text-decoration: underline; }
+    .action-buttons { display: flex; gap: 10px; margin-top: 20px; }
+    /* Adicionado para mostrar a imagem de pré-visualização */
+    .article-image {
+        max-width: 100px;
+        max-height: 100px;
+        float: left;
+        margin-right: 15px;
+        border-radius: 4px;
+    }
   </style>
 </head>
 <body>
@@ -38,10 +49,19 @@
 
   <h2>Notícias</h2>
   <% if (articles && articles.length > 0) { %>
-    <form action="/send-email" method="POST">
+    <form id="newsForm" action="/send-email" method="POST">
       <ul>
         <% articles.forEach(a => { %>
-          <li>
+          <%# ALTERAÇÃO: Adicionados data-source e data-image %>
+          <li data-title="<%= a.title %>" 
+              data-link="<%= a.link %>" 
+              data-topic="<%= a.topic %>"
+              data-source="<%= a.source %>"
+              data-image="<%= a.image || '' %>">
+
+            <% if (a.image) { %>
+              <img src="<%= a.image %>" alt="Imagem da matéria" class="article-image">
+            <% } %>
             <input type="checkbox" name="selectedArticles" value="<%= a.link %>">
             <strong><%= a.title %></strong><br>
             <%= a.description || 'Sem descrição' %><br>
@@ -51,12 +71,59 @@
           </li>
         <% }); %>
       </ul>
-      <button type="submit" style="flex: 1;">Enviar Selecionadas por E-mail</button>
+      <div class="action-buttons">
+        <button type="submit" style="flex: 1;">Enviar Selecionadas por E-mail</button>
+        <button type="button" onclick="copyToWhatsapp()" class="whatsapp-btn" style="flex: 1;">Copiar para envio de Whatsapp</button>
+      </div>
     </form>
   <% } else { %>
     <p>Nenhuma notícia disponível.</p>
   <% } %>
   <p>Atualizado por: Sistema Newsletter Pro - <%= new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %></p>
   <p><a href="/">Voltar para Gerenciar Inscrições</a></p>
+
+  <script>
+    function copyToWhatsapp() {
+      const form = document.getElementById('newsForm');
+      const checkedBoxes = form.querySelectorAll('input[name="selectedArticles"]:checked');
+
+      if (checkedBoxes.length === 0) {
+        alert('Por favor, selecione ao menos uma notícia para copiar.');
+        return;
+      }
+
+      let whatsappText = '📰 *Resumo de Notícias Selecionadas*\n\n';
+      whatsappText += '-----------------------------------\n\n';
+
+      checkedBoxes.forEach(checkbox => {
+        const listItem = checkbox.closest('li');
+        // ** ALTERAÇÃO: Captura de todos os dados **
+        const title = listItem.dataset.title;
+        const topic = listItem.dataset.topic;
+        const source = listItem.dataset.source;
+        const link = listItem.dataset.link;
+        const image = listItem.dataset.image;
+        
+        // ** ALTERAÇÃO: Novo formato profissional para o WhatsApp **
+        whatsappText += `*${title.trim()}*\n\n`;
+        whatsappText += `*Assuntos:* ${topic}\n`;
+        whatsappText += `*Fonte:* ${source}\n\n`;
+        if (image) {
+            whatsappText += `*Imagem:* ${image}\n\n`;
+        }
+        whatsappText += `*Leia mais:* ${link}\n\n`;
+        whatsappText += '-----------------------------------\n\n';
+      });
+      
+      navigator.clipboard.writeText(whatsappText.trim())
+        .then(() => {
+          alert(`Notícias copiadas para a área de transferência! O texto formatado está pronto para colar no WhatsApp.`);
+        })
+        .catch(err => {
+          console.error('Falha ao copiar texto: ', err);
+          alert('Ocorreu um erro ao tentar copiar as notícias.');
+        });
+    }
+  </script>
 </body>
 </html>
