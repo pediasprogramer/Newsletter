@@ -28,11 +28,12 @@ db.defaults({ subscribers: [], articles: [] }).write();
 let newsCache = {};
 
 // ===================================================================================
-// 3. FONTES DE NOTÍCIAS E CONFIGURAÇÃO DE E-MAIL (COMPLETO)
+// 3. FONTES DE NOTÍCIAS E CONFIGURAÇÃO DE E-MAIL (ATUALIZADO)
 // ===================================================================================
 const topicFeeds = {
-    'notícias gerais': [ 'https://news.google.com/rss/search?q=noticias+brasil&hl=pt-BR&gl=BR&ceid=BR:pt' ],
-    'política brasil': [ 'https://news.google.com/rss/search?q=política+brasil&hl=pt-BR&gl=BR&ceid=BR:pt', 'https://www.diariodopoder.com.br/feed/', 'https://www.poder360.com.br/feed/', 'https://www.cartacapital.com.br/feed/' ],
+    'política': [ 'https://news.google.com/rss/search?q=política+brasil&hl=pt-BR&gl=BR&ceid=BR:pt', 'https://www.poder360.com.br/feed/', 'https://www.cartacapital.com.br/feed/' ],
+    'economia': [ 'https://news.google.com/rss/search?q=economia+brasil&hl=pt-BR&gl=BR&ceid=BR:pt', 'https://g1.globo.com/rss/g1/economia/' ],
+    'mundo':    [ 'https://news.google.com/rss/search?q=notícias+mundo&hl=pt-BR&gl=BR&ceid=BR:pt', 'https://g1.globo.com/rss/g1/mundo/' ],
     'ciro nogueira': [ 'https://news.google.com/rss/search?q=Ciro+Nogueira&hl=pt-BR&gl=BR&ceid=BR:pt', 'https://www.diariodopoder.com.br/feed/' ]
 };
 
@@ -106,28 +107,56 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // ===================================================================================
-// 7. ROTAS DA APLICAÇÃO (TODAS MANTIDAS)
+// 7. ROTAS DA APLICAÇÃO (ROTA PRINCIPAL ATUALIZADA)
 // ===================================================================================
 
-// ROTA PRINCIPAL: Renderiza o painel de consulta de notícias.
+// ROTA PRINCIPAL: Renderiza o painel com temas fixos e o tema pesquisado.
 app.get('/', async (req, res) => {
     const { topic, startDate, endDate } = req.query;
-    let articles = [];
+    const mandatoryTopics = ['política', 'economia', 'mundo'];
+    let topicsToFetch = [...mandatoryTopics];
+    let articlesByTopic = {};
+    
+    // Adiciona o tópico pesquisado (se houver e não for um dos obrigatórios)
+    if (topic && !mandatoryTopics.includes(topic.toLowerCase())) {
+        topicsToFetch.push(topic);
+    }
 
-    if (topic) {
-        const fetchedArticles = await fetchNewsForTopic(topic);
-        articles = [...fetchedArticles];
-        if (startDate) articles = articles.filter(a => new Date(a.pubDate) >= new Date(startDate));
-        if (endDate) {
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
-            articles = articles.filter(a => new Date(a.pubDate) <= end);
-        }
+    try {
+        // Busca notícias para todos os tópicos em paralelo
+        const promises = topicsToFetch.map(async (t) => {
+            let articles = await fetchNewsForTopic(t);
+
+            // Aplica filtros de data se existirem
+            if (startDate) articles = articles.filter(a => new Date(a.pubDate) >= new Date(startDate));
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                articles = articles.filter(a => new Date(a.pubDate) <= end);
+            }
+            
+            // Adiciona ao objeto final, mesmo que esteja vazio
+            articlesByTopic[t] = articles;
+        });
+        
+        await Promise.all(promises);
+
+    } catch (error) {
+        console.error("Erro ao buscar notícias:", error);
+        // Em caso de erro, inicializa com arrays vazios para não quebrar a página
+        mandatoryTopics.forEach(t => {
+            if (!articlesByTopic[t]) articlesByTopic[t] = [];
+        });
     }
     
-    // Esta rota renderiza apenas o painel de consulta, sem dados de inscritos.
-    res.render('index', { articles: articles, query: req.query });
+    // Passa os dados corretos para o template
+    res.render('index', { 
+        articlesByTopic, 
+        query: req.query, 
+        topics: Object.keys(articlesByTopic) // AQUI ESTÁ A VARIÁVEL 'topics' QUE FALTAVA
+    });
 });
+
 
 // ROTA PARA INSCRIÇÃO (FUNCIONALIDADE MANTIDA NO BACKEND)
 app.post('/subscribe', async (req, res) => {
@@ -156,7 +185,7 @@ app.get('/reset-db', (req, res) => {
 
 // ROTA PARA ENVIO DE E-MAIL (FUNCIONALIDADE MANTIDA NO BACKEND)
 app.post('/send-email', async (req, res) => {
-    let { selectedLinks, recipientEmails } = req.body; // Espera links e e-mails no corpo da requisição
+    let { selectedLinks, recipientEmails } = req.body;
 
     if (!selectedLinks || !recipientEmails) return res.status(400).send('Links de artigos e e-mails dos destinatários são obrigatórios!');
     if (!Array.isArray(selectedLinks)) selectedLinks = [selectedLinks];
@@ -221,5 +250,8 @@ cron.schedule('*/30 * * * *', async () => {
 // ===================================================================================
 app.listen(port, async () => {
     console.log(`Servidor rodando em http://localhost:${port}`);
-    await updateAllNews();
+    // Carrega notícias iniciais ao iniciar o servidor
+    if (Object.keys(newsCache).length === 0) {
+        await updateAllNews();
+    }
 });

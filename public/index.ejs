@@ -53,7 +53,7 @@
             padding: 20px 30px;
             border-radius: 12px;
             box-shadow: 0 4px 15px var(--shadow-color);
-            margin-bottom: 50px;
+            margin-bottom: 30px;
             transition: background-color 0.3s;
             position: relative;
         }
@@ -101,6 +101,37 @@
             cursor: pointer;
             font-size: 18px;
         }
+        
+        /* --- ESTILOS DAS ABAS (TABS) --- */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .tab-btn {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            color: var(--text-color);
+            font-size: 1.1em;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            text-transform: capitalize;
+        }
+        .tab-btn.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+        }
+        .tab-content .tab-pane {
+            display: none;
+        }
+        .tab-content .tab-pane.active {
+            display: block;
+        }
+
 
         /* --- ESTRUTURA DA TIMELINE --- */
         .timeline {
@@ -225,11 +256,11 @@
 </head>
 <body>
 
-    <div class="container">
+    <div class="container" id="news-container">
         <header class="header">
             <h1>Painel de Monitoramento</h1>
             <form action="/" method="GET">
-                <input type="text" name="topic" placeholder="Digite o tópico para buscar..." value="<%= query.topic || '' %>" required style="flex: 3;">
+                <input type="text" name="topic" placeholder="Digite um tópico adicional..." value="<%= query.topic || '' %>" style="flex: 3;">
                 <input type="date" name="startDate" placeholder="Data Inicial" value="<%= query.startDate || '' %>" style="flex: 1;">
                 <input type="date" name="endDate" placeholder="Data Final" value="<%= query.endDate || '' %>" style="flex: 1;">
                 <button type="submit" class="search-button"><i class="fas fa-search"></i> Consultar</button>
@@ -239,48 +270,65 @@
             </button>
         </header>
 
-        <div id="newsForm">
-            <% if (typeof articles !== 'undefined' && articles.length > 0) { %>
-                <div class="timeline">
-                    <% articles.forEach(a => { %>
-                        <div class="timeline-item">
-                            <div class="news-card" data-title="<%= a.title %>" data-link="<%= a.link %>" data-topic="<%= a.topic %>" data-source="<%= a.source %>">
-                                <input type="checkbox" name="selectedArticles" value="<%= a.link %>" style="position: absolute; top: 15px; right: 15px;">
-                                <% if (a.image) { %>
-                                   <img src="<%= a.image %>" alt="Imagem da matéria" class="article-image" onerror="this.style.display='none'">
-                                <% } %>
-                                <strong><%= a.title %></strong>
-                                <div class="article-meta">
-                                    <em>Fonte:</em> <%= a.source %> | <em>Data:</em> <%= new Date(a.pubDate).toLocaleDateString('pt-BR') %>
-                                </div>
-                                <p><%= a.description.substring(0, 150) %>...</p> <a href="<%= a.link %>" target="_blank">Leia mais</a>
+        <% if (typeof topics !== 'undefined' && topics.length > 0 && topics.some(t => articlesByTopic[t] && articlesByTopic[t].length > 0)) { %>
+            <div class="tabs">
+                <% topics.forEach((topic, index) => { %>
+                    <button class="tab-btn <%= index === 0 ? 'active' : '' %>" data-tab-target="#tab-<%= topic.replace(/\s+/g, '-') %>">
+                        <%= topic %>
+                    </button>
+                <% }) %>
+            </div>
+
+            <div class="tab-content">
+                <% topics.forEach((topic, index) => { %>
+                    <div class="tab-pane <%= index === 0 ? 'active' : '' %>" id="tab-<%= topic.replace(/\s+/g, '-') %>">
+                        <% const articles = articlesByTopic[topic]; %>
+                        <% if (articles && articles.length > 0) { %>
+                            <div class="timeline">
+                                <% articles.forEach(a => { %>
+                                    <div class="timeline-item">
+                                        <div class="news-card" data-title="<%= a.title %>" data-link="<%= a.link %>" data-topic="<%= a.topic %>">
+                                            <input type="checkbox" name="selectedArticles" value="<%= a.link %>" style="position: absolute; top: 15px; right: 15px;">
+                                            <% if (a.image) { %>
+                                               <img src="<%= a.image %>" alt="Imagem da matéria" class="article-image" onerror="this.style.display='none'">
+                                            <% } %>
+                                            <strong><%= a.title %></strong>
+                                            <div class="article-meta">
+                                               <em>Fonte:</em> <%= a.source %> | <em>Data:</em> <%= new Date(a.pubDate).toLocaleDateString('pt-BR') %>
+                                            </div>
+                                            <p><%= a.description.substring(0, 150) %>...</p> 
+                                            <a href="<%= a.link %>" target="_blank">Leia mais</a>
+                                        </div>
+                                    </div>
+                                <% }); %>
                             </div>
-                        </div>
-                    <% }); %>
-                </div>
-            <% } else if (query.topic) { %>
-                <p style="text-align: center;">Nenhuma notícia encontrada para este tópico ou filtro.</p>
-            <% } else { %>
-                <p style="text-align: center;">Digite um termo na busca acima para começar.</p>
-            <% } %>
-        </div>
+                        <% } else { %>
+                             <p style="text-align: center;">Nenhuma notícia encontrada para este tópico ou filtro.</p>
+                        <% } %>
+                    </div>
+                <% }); %>
+            </div>
+        <% } else if (typeof query !== 'undefined' && query.topic) { %>
+            <p style="text-align: center;">Nenhuma notícia encontrada para os tópicos consultados.</p>
+        <% } else { %>
+            <p style="text-align: center;">O sistema está pronto. Pesquise um tópico adicional ou filtre por data para começar.</p>
+        <% } %>
     </div>
 
-    <% if (typeof articles !== 'undefined' && articles.length > 0) { %>
+    <% if (typeof topics !== 'undefined' && topics.length > 0 && topics.some(t => articlesByTopic[t] && articlesByTopic[t].length > 0)) { %>
         <button type="button" onclick="copyToWhatsapp()" class="floating-whatsapp-btn" aria-label="Copiar Seleção para WhatsApp">
             <i class="fab fa-whatsapp" style="font-size: 28px; color: white;"></i>
         </button>
     <% } %>
 
     <script>
-        // --- SCRIPT PARA ANIMAÇÃO DE SCROLL E DARK MODE ---
+        // --- SCRIPTS DA PÁGINA ---
 
         // 1. Lógica do Dark Mode
         const themeToggle = document.getElementById('theme-toggle');
         const body = document.body;
         const themeIcon = themeToggle.querySelector('i');
 
-        // Verifica se o usuário já tem uma preferência salva
         if (localStorage.getItem('theme') === 'dark') {
             body.classList.add('dark-mode');
             themeIcon.classList.remove('fa-moon');
@@ -301,41 +349,106 @@
         });
 
         // 2. Lógica da Animação da Timeline ao Rolar
-        const timelineItems = document.querySelectorAll('.timeline-item');
-
         const observer = new IntersectionObserver(entries => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('visible');
-                    observer.unobserve(entry.target); // Para a animação não repetir
+                    observer.unobserve(entry.target);
                 }
             });
-        }, { threshold: 0.1 }); // A animação começa quando 10% do item está visível
+        }, { threshold: 0.1 });
 
-        timelineItems.forEach(item => {
+        document.querySelectorAll('.timeline-item').forEach(item => {
             observer.observe(item);
         });
+        
+        // 3. Lógica das Abas (Tabs)
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabPanes = document.querySelectorAll('.tab-pane');
 
-        // 3. Sua função original do WhatsApp
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                tabPanes.forEach(pane => pane.classList.remove('active'));
+                document.querySelector(button.dataset.tabTarget).classList.add('active');
+            });
+        });
+
+        // 4. Nova função para copiar para o WhatsApp (CORRIGIDA)
         function copyToWhatsapp() {
-          const form = document.getElementById('newsForm');
-          const checkedBoxes = form.querySelectorAll('input[name="selectedArticles"]:checked');
-          if (checkedBoxes.length === 0) {
-            alert('Por favor, selecione ao menos uma notícia para copiar.');
-            return;
-          }
-          let whatsappText = '📰 *Resumo de Notícias Selecionadas*\n\n-----------------------------------\n\n';
-          checkedBoxes.forEach(checkbox => {
-            const listItem = checkbox.closest('.news-card'); // Alterado de 'li' para '.news-card'
-            const title = listItem.dataset.title;
-            const topic = listItem.dataset.topic;
-            const source = listItem.dataset.source;
-            const link = listItem.dataset.link;
-            whatsappText += `*${title.trim()}*\n\n*Assuntos:* ${topic}\n*Fonte:* ${source}\n\n*Leia mais:* ${link}\n\n-----------------------------------\n\n`;
-          });
-          navigator.clipboard.writeText(whatsappText.trim())
-            .then(() => alert(`Notícias copiadas! O texto formatado está pronto para colar no WhatsApp.`))
-            .catch(err => alert('Ocorreu um erro ao tentar copiar as notícias.'));
+            // SELETOR CORRIGIDO: Busca a partir do container principal para incluir todas as abas.
+            const newsContainer = document.getElementById('news-container');
+            const checkedBoxes = newsContainer.querySelectorAll('input[name="selectedArticles"]:checked');
+            
+            if (checkedBoxes.length === 0) {
+                alert('Por favor, selecione ao menos uma notícia para copiar.');
+                return;
+            }
+
+            // Agrupa artigos por tópico
+            const articlesByTopic = {};
+            checkedBoxes.forEach(checkbox => {
+                const card = checkbox.closest('.news-card');
+                const topic = card.dataset.topic;
+                const article = {
+                    title: card.dataset.title.trim(),
+                    link: card.dataset.link
+                };
+                if (!articlesByTopic[topic]) {
+                    articlesByTopic[topic] = [];
+                }
+                articlesByTopic[topic].push(article);
+            });
+
+            // Monta a saudação e a data
+            const now = new Date();
+            let greeting;
+            const hour = now.getHours();
+            if (hour >= 5 && hour < 12) greeting = "Bom dia!";
+            else if (hour >= 12 && hour < 18) greeting = "Boa tarde!";
+            else greeting = "Boa noite!";
+            
+            const dateString = now.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', weekday: 'long' });
+
+            // Inicia a montagem do texto
+            let whatsappText = `${greeting} ${dateString}.\n\nAqui estão os principais assuntos para você começar o dia bem-informado.\n\n`;
+
+            const topicHeaders = {
+                'política': '📰 POLÍTICA:',
+                'economia': '💵 ECONOMIA:',
+                'mundo': '🌍 MUNDO:'
+            };
+            
+            // Define a ordem de exibição dos tópicos
+            const topicOrder = ['política', 'economia', 'mundo'];
+            // Adiciona outros tópicos (como o pesquisado) que não estão na ordem principal
+            Object.keys(articlesByTopic).forEach(topic => {
+                if (!topicOrder.includes(topic.toLowerCase())) {
+                    topicOrder.push(topic);
+                }
+            });
+
+            topicOrder.forEach(topic => {
+                if (articlesByTopic[topic]) {
+                    // Usa o cabeçalho predefinido ou cria um genérico
+                    const header = topicHeaders[topic.toLowerCase()] || `📰 ${topic.toUpperCase()}:`;
+                    whatsappText += `${header}\n\n`;
+                    
+                    articlesByTopic[topic].forEach(article => {
+                        whatsappText += `🔹 ${article.title}\n`;
+                        whatsappText += `Leia mais: ${article.link}\n\n`;
+                    });
+                }
+            });
+            
+            whatsappText += "Escrito por: ";
+
+            // Copia para a área de transferência
+            navigator.clipboard.writeText(whatsappText.trim())
+                .then(() => alert(`Notícias copiadas! O texto formatado está pronto para colar no WhatsApp.`))
+                .catch(err => alert('Ocorreu um erro ao tentar copiar as notícias.'));
         }
     </script>
 </body>
