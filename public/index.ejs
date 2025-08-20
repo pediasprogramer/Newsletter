@@ -64,7 +64,8 @@
             margin: 0 0 20px 0;
         }
 
-        form { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
+        form { display: flex;
+            gap: 15px; flex-wrap: wrap; align-items: flex-end; }
         input[type="text"], input[type="date"] {
             padding: 12px;
             border: 1px solid var(--border-color);
@@ -85,7 +86,8 @@
             font-weight: 500;
             transition: background-color 0.2s;
         }
-        .search-button:hover { background-color: #0056b3; }
+        .search-button:hover { background-color: #0056b3;
+        }
 
         /* --- BOTÃO DARK MODE --- */
         .theme-toggle-btn {
@@ -163,8 +165,10 @@
             transform: translateY(0);
         }
 
-        .timeline-item:nth-child(odd) { left: 0; }
-        .timeline-item:nth-child(even) { left: 50%; }
+        .timeline-item:nth-child(odd) { left: 0;
+        }
+        .timeline-item:nth-child(even) { left: 50%;
+        }
 
         .timeline-item::after { /* Círculo na linha do tempo */
             content: '';
@@ -178,7 +182,8 @@
             border-radius: 50%;
             z-index: 1;
         }
-        .timeline-item:nth-child(even)::after { left: -8px; }
+        .timeline-item:nth-child(even)::after { left: -8px;
+        }
 
         /* --- CARD DE NOTÍCIA NA TIMELINE --- */
         .news-card {
@@ -251,7 +256,8 @@
             display: flex; align-items: center; justify-content: center;
             transition: transform 0.2s ease-in-out;
         }
-        .floating-whatsapp-btn:hover { transform: scale(1.1); }
+        .floating-whatsapp-btn:hover { transform: scale(1.1);
+        }
     </style>
 </head>
 <body>
@@ -259,11 +265,13 @@
     <div class="container" id="news-container">
         <header class="header">
             <h1>Painel de Monitoramento</h1>
-            <form action="/" method="GET">
-                <input type="text" name="topic" placeholder="Digite um tópico adicional..." value="<%= query.topic || '' %>" style="flex: 3;">
+            <form action="/" method="GET" id="search-form">
+                <input type="text" name="topic" placeholder="Digite um tópico adicional..." value="<%= query.topic || '' %>" style="flex: 2;">
                 <input type="date" name="startDate" placeholder="Data Inicial" value="<%= query.startDate || '' %>" style="flex: 1;">
                 <input type="date" name="endDate" placeholder="Data Final" value="<%= query.endDate || '' %>" style="flex: 1;">
+                
                 <button type="submit" class="search-button"><i class="fas fa-search"></i> Consultar</button>
+                <button type="button" id="expand-search-btn" class="search-button" style="background-color: #6c757d; border-color: #6c757d;">Ampliar Pesquisa</button>
             </form>
             <button class="theme-toggle-btn" id="theme-toggle" aria-label="Alterar Tema">
                 <i class="fas fa-moon"></i>
@@ -308,8 +316,8 @@
                     </div>
                 <% }); %>
             </div>
-        <% } else if (typeof query !== 'undefined' && query.topic) { %>
-            <p style="text-align: center;">Nenhuma notícia encontrada para os tópicos consultados.</p>
+        <% } else if (typeof query !== 'undefined' && (query.topic || query.startDate || query.endDate)) { %>
+            <p style="text-align: center;">Nenhuma notícia encontrada para os tópicos e filtros consultados.</p>
         <% } else { %>
             <p style="text-align: center;">O sistema está pronto. Pesquise um tópico adicional ou filtre por data para começar.</p>
         <% } %>
@@ -361,7 +369,7 @@
         document.querySelectorAll('.timeline-item').forEach(item => {
             observer.observe(item);
         });
-        
+
         // 3. Lógica das Abas (Tabs)
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabPanes = document.querySelectorAll('.tab-pane');
@@ -376,9 +384,24 @@
             });
         });
 
-        // 4. Nova função para copiar para o WhatsApp (CORRIGIDA)
+        // 4. Lógica para o botão "Ampliar Pesquisa"
+        document.getElementById('expand-search-btn').addEventListener('click', function() {
+            const form = document.getElementById('search-form');
+            
+            let searchTypeInput = form.querySelector('input[name="searchType"]');
+            if (!searchTypeInput) {
+                searchTypeInput = document.createElement('input');
+                searchTypeInput.type = 'hidden';
+                searchTypeInput.name = 'searchType';
+                form.appendChild(searchTypeInput);
+            }
+            searchTypeInput.value = 'expanded';
+            
+            form.submit();
+        });
+
+        // 5. Função para copiar para o WhatsApp
         function copyToWhatsapp() {
-            // SELETOR CORRIGIDO: Busca a partir do container principal para incluir todas as abas.
             const newsContainer = document.getElementById('news-container');
             const checkedBoxes = newsContainer.querySelectorAll('input[name="selectedArticles"]:checked');
             
@@ -387,7 +410,6 @@
                 return;
             }
 
-            // Agrupa artigos por tópico
             const articlesByTopic = {};
             checkedBoxes.forEach(checkbox => {
                 const card = checkbox.closest('.news-card');
@@ -402,28 +424,23 @@
                 articlesByTopic[topic].push(article);
             });
 
-            // Monta a saudação e a data
             const now = new Date();
             let greeting;
             const hour = now.getHours();
             if (hour >= 5 && hour < 12) greeting = "Bom dia!";
             else if (hour >= 12 && hour < 18) greeting = "Boa tarde!";
             else greeting = "Boa noite!";
-            
             const dateString = now.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', weekday: 'long' });
-
-            // Inicia a montagem do texto
+            
             let whatsappText = `${greeting} ${dateString}.\n\nAqui estão os principais assuntos para você começar o dia bem-informado.\n\n`;
-
+            
             const topicHeaders = {
                 'política': '📰 POLÍTICA:',
                 'economia': '💵 ECONOMIA:',
                 'mundo': '🌍 MUNDO:'
             };
             
-            // Define a ordem de exibição dos tópicos
             const topicOrder = ['política', 'economia', 'mundo'];
-            // Adiciona outros tópicos (como o pesquisado) que não estão na ordem principal
             Object.keys(articlesByTopic).forEach(topic => {
                 if (!topicOrder.includes(topic.toLowerCase())) {
                     topicOrder.push(topic);
@@ -432,7 +449,6 @@
 
             topicOrder.forEach(topic => {
                 if (articlesByTopic[topic]) {
-                    // Usa o cabeçalho predefinido ou cria um genérico
                     const header = topicHeaders[topic.toLowerCase()] || `📰 ${topic.toUpperCase()}:`;
                     whatsappText += `${header}\n\n`;
                     
@@ -442,10 +458,9 @@
                     });
                 }
             });
-            
+
             whatsappText += "Escrito por: ";
 
-            // Copia para a área de transferência
             navigator.clipboard.writeText(whatsappText.trim())
                 .then(() => alert(`Notícias copiadas! O texto formatado está pronto para colar no WhatsApp.`))
                 .catch(err => alert('Ocorreu um erro ao tentar copiar as notícias.'));

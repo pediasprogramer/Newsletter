@@ -112,7 +112,21 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // ROTA PRINCIPAL: Renderiza o painel com temas fixos e o tema pesquisado.
 app.get('/', async (req, res) => {
-    const { topic, startDate, endDate } = req.query;
+    const { topic, startDate, endDate, searchType } = req.query;
+    
+    // Lista dos sites principais para a busca padrão
+    const primarySources = [
+        'poder360.com.br',
+        'folha.uol.com.br',
+        'estadao.com.br',
+        'cnnbrasil.com.br',
+        'veja.abril.com.br',
+        'valor.globo.com',
+        'oglobo.globo.com',
+        'metropoles.com',
+        'g1.globo.com'
+    ];
+    
     const mandatoryTopics = ['política', 'economia', 'mundo'];
     let topicsToFetch = [...mandatoryTopics];
     let articlesByTopic = {};
@@ -126,6 +140,18 @@ app.get('/', async (req, res) => {
         // Busca notícias para todos os tópicos em paralelo
         const promises = topicsToFetch.map(async (t) => {
             let articles = await fetchNewsForTopic(t);
+
+            // Aplica o filtro de fontes apenas se a busca NÃO for 'expanded'
+            if (searchType !== 'expanded') {
+                articles = articles.filter(article => {
+                    try {
+                        const articleHostname = new URL(article.link).hostname;
+                        return primarySources.some(sourceDomain => articleHostname.includes(sourceDomain));
+                    } catch (e) {
+                        return false; // Descarta artigos com links inválidos
+                    }
+                });
+            }
 
             // Aplica filtros de data se existirem
             if (startDate) articles = articles.filter(a => new Date(a.pubDate) >= new Date(startDate));
@@ -153,7 +179,7 @@ app.get('/', async (req, res) => {
     res.render('index', { 
         articlesByTopic, 
         query: req.query, 
-        topics: Object.keys(articlesByTopic) // AQUI ESTÁ A VARIÁVEL 'topics' QUE FALTAVA
+        topics: Object.keys(articlesByTopic)
     });
 });
 
